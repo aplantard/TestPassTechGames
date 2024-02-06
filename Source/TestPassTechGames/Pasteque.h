@@ -61,7 +61,11 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TSoftObjectPtr<UInputAction> RotateInputAction;
 
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TSoftObjectPtr<UInputAction> JumpInputAction;
+
 	void Move(const FInputActionValue& Value);
 	void Rotate(const FInputActionValue& Value);
+	void Jump(const FInputActionValue& Value);
 
 };

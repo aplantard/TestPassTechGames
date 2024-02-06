@@ -51,7 +51,7 @@ void APasteque::Tick(float DeltaTime)
 
 	FVector NewWorldLocation = FMath::VInterpTo(SpringArmLocation, MeshLocation, AppDeltaTime, 2.0f);
 
-	SpringArmComponent->SetWorldLocation(NewWorldLocation);
+	SpringArmComponent->SetWorldLocation(FVector(NewWorldLocation.X, NewWorldLocation.Y, SpringArmLocation.Z));
 
 }
 
@@ -88,23 +88,28 @@ void APasteque::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		Input->BindAction(RotateInputAction.LoadSynchronous(), ETriggerEvent::Triggered, this, &APasteque::Rotate);
 	}
 
+	if (JumpInputAction)
+	{
+		Input->BindAction(JumpInputAction.LoadSynchronous(), ETriggerEvent::Triggered, this, &APasteque::Jump);
+	}
+
 }
 
 void APasteque::Move(const FInputActionValue& Value)
 {
-	FVector MovementVector = Value.Get<FVector>();
+	FVector MovementVector = Value.Get<FVector>() * MovementSpeed;
 
-	FVector ForwardVector = PlayerCamera->GetForwardVector();
-	FVector RightVector = PlayerCamera->GetRightVector();
+	FVector ForwardVector = SpringArmComponent->GetForwardVector();
+	FVector RightVector = SpringArmComponent->GetRightVector();
 
-	FVector UpDownVector = FVector(ForwardVector.X, ForwardVector.Y, 0);
-	FVector RightLeftVector = FVector(RightVector.X, RightVector.Y, 0);
+	FVector UpDownVector = FVector::VectorPlaneProject(ForwardVector, FVector(0, 0, 1));
+	FVector RightLeftVector = FVector::VectorPlaneProject(RightVector, FVector(0, 0, 1));
 
-	MeshComponent->AddForce(UpDownVector * (MovementVector.Y * MovementSpeed));
-	MeshComponent->AddForce(RightLeftVector * (MovementVector.X * MovementSpeed));
+	MeshComponent->AddForce(UpDownVector * MovementVector.Y, FName(), true);
+	MeshComponent->AddForce(RightLeftVector * MovementVector.X, FName(), true);
 
-	AddMovementInput(UpDownVector, MovementVector.Y * MovementSpeed);
-	AddMovementInput(RightLeftVector, MovementVector.X * MovementSpeed);
+	FVector PastequeVelocity = MeshComponent->GetPhysicsLinearVelocity();
+	MeshComponent->SetPhysicsLinearVelocity(FVector(PastequeVelocity.X * 0.96, PastequeVelocity.Y * 0.96, PastequeVelocity.Z));
 }
 
 void APasteque::Rotate(const FInputActionValue& Value)
@@ -113,4 +118,11 @@ void APasteque::Rotate(const FInputActionValue& Value)
 	SpringArmComponent->AddWorldRotation(FRotator(0, RotateValue * RotationSpeed, 0));
 }
 
+void APasteque::Jump(const FInputActionValue& Value)
+{
+ 	float JumpValue = Value.Get<float>();
+
+	FVector PastequeVelocity = MeshComponent->GetPhysicsLinearVelocity();
+	MeshComponent->SetPhysicsLinearVelocity(FVector(0, 0, JumpValue*10), true, FName());
+}
 
