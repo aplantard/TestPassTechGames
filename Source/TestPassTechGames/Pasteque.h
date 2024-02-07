@@ -12,6 +12,7 @@ class UInputMappingContext;
 class UCameraComponent;
 class UInputAction;
 class UFloatingPawnMovement;
+class USphereComponent;
 struct FInputActionValue;
 
 UCLASS()
@@ -44,6 +45,9 @@ private:
 	UCameraComponent* PlayerCamera;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pasteque", meta = (AllowPrivateAccess = "true"))
+	USphereComponent* SphereCollision;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pasteque", meta = (AllowPrivateAccess = "true"))
 	UFloatingPawnMovement* CharacterMovement;
 
 	UPROPERTY(EditAnywhere, BluePrintReadWrite, Category = "Pasteque", meta = (AllowPrivateAccess = "true"))
@@ -51,6 +55,9 @@ private:
 
 	UPROPERTY(EditAnywhere, BluePrintReadWrite, Category = "Pasteque", meta = (AllowPrivateAccess = "true"))
 	float RotationSpeed = 10.f;
+
+	UPROPERTY(EditAnywhere, BluePrintReadWrite, Category = "Pasteque", meta = (AllowPrivateAccess = "true"))
+	float MaxJumpHeight = 150.f;
 
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TSoftObjectPtr<UInputMappingContext> InputMapping;
@@ -63,6 +70,14 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TSoftObjectPtr<UInputAction> JumpInputAction;
+
+	UFUNCTION()
+	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+
+
+	float InitialCameraHeight = 0.f;
+	float NewCameraHeight = 0.f;
+	FVector LastBounceDirection = FVector(0, 0, 1);
 
 	void Move(const FInputActionValue& Value);
 	void Rotate(const FInputActionValue& Value);

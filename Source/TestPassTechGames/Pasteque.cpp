@@ -8,6 +8,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/FloatingPawnMovement.h"
 #include "Camera/CameraComponent.h"
+#include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "InputMappingContext.h"
 #include "Engine/World.h"
@@ -20,8 +21,12 @@ APasteque::APasteque()
 
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("rootComponent"));
 
+	SphereCollision = CreateDefaultSubobject<USphereComponent>(TEXT("sphereComponent"));
+	SphereCollision->SetupAttachment(RootComponent);
+
 	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("pastequeMesh"));
-	MeshComponent->SetupAttachment(RootComponent);
+	MeshComponent->OnComponentHit.AddDynamic(this, &APasteque::OnHit);
+	MeshComponent->SetupAttachment(SphereCollision);
 
 	SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>(TEXT("springArmComponent"));
 	SpringArmComponent->SetupAttachment(RootComponent);
@@ -36,7 +41,9 @@ APasteque::APasteque()
 void APasteque::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	InitialCameraHeight = SpringArmComponent->GetRelativeLocation().Z;
+	NewCameraHeight = InitialCameraHeight;
 }
 
 // Called every frame
@@ -45,13 +52,20 @@ void APasteque::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	FVector SpringArmLocation = SpringArmComponent->GetComponentLocation();
+	FVector SpringArmRelativeLocation = SpringArmComponent->GetRelativeLocation();
 	FVector MeshLocation = MeshComponent->GetComponentLocation();
 	
 	float AppDeltaTime = GetWorld()->GetDeltaSeconds();
 
 	FVector NewWorldLocation = FMath::VInterpTo(SpringArmLocation, MeshLocation, AppDeltaTime, 2.0f);
+	float NewHeight = SpringArmLocation.Z;
+	
+	if (FMath::Abs(NewCameraHeight - SpringArmLocation.Z) > 0.001f)
+	{
+		NewHeight = FMath::FInterpTo(SpringArmLocation.Z, NewCameraHeight, AppDeltaTime, 2.0f);
+	}
 
-	SpringArmComponent->SetWorldLocation(FVector(NewWorldLocation.X, NewWorldLocation.Y, SpringArmLocation.Z));
+	SpringArmComponent->SetWorldLocation(FVector(NewWorldLocation.X, NewWorldLocation.Y, NewHeight));
 
 }
 
@@ -95,6 +109,18 @@ void APasteque::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 }
 
+void APasteque::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	float HeightOfImpactPoint = Hit.ImpactPoint.Z;
+
+	if (HeightOfImpactPoint != NewCameraHeight)
+	{
+		NewCameraHeight = InitialCameraHeight + HeightOfImpactPoint;
+	}
+
+	LastBounceDirection = Hit.ImpactNormal;
+}
+
 void APasteque::Move(const FInputActionValue& Value)
 {
 	FVector MovementVector = Value.Get<FVector>() * MovementSpeed;
@@ -123,6 +149,6 @@ void APasteque::Jump(const FInputActionValue& Value)
  	float JumpValue = Value.Get<float>();
 
 	FVector PastequeVelocity = MeshComponent->GetPhysicsLinearVelocity();
-	MeshComponent->SetPhysicsLinearVelocity(FVector(0, 0, JumpValue*10), true, FName());
+	MeshComponent->SetPhysicsLinearVelocity(FVector(LastBounceDirection.X, LastBounceDirection.Y, LastBounceDirection.Z * (JumpValue * 5 )), true, FName());
 }
 
