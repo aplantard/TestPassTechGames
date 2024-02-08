@@ -65,12 +65,6 @@ void APasteque::Tick(float DeltaTime)
 	FVector SpringArmRelativeLocation = SpringArmComponent->GetRelativeLocation();
 	FVector MeshLocation = MeshComponent->GetComponentLocation();
 
-	if ((MeshLocation.Z - LastBounceLocation.Z) >= MaxJumpHeight)
-	{
-		FVector PastequeVelocity = MeshComponent->GetPhysicsLinearVelocity();
-		MeshComponent->SetPhysicsLinearVelocity(FVector(PastequeVelocity.X, PastequeVelocity.Y, 0));
-	}
-
 	// Move Camera To Watermelon
 	float AppDeltaTime = GetWorld()->GetDeltaSeconds();
 
@@ -121,7 +115,9 @@ void APasteque::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 	if (JumpInputAction)
 	{
-		Input->BindAction(JumpInputAction.LoadSynchronous(), ETriggerEvent::Triggered, this, &APasteque::Jump);
+		Input->BindAction(JumpInputAction.LoadSynchronous(), ETriggerEvent::Ongoing, this, &APasteque::Jump);
+		Input->BindAction(JumpInputAction.LoadSynchronous(), ETriggerEvent::Started, this, &APasteque::Jump);
+
 	}
 
 	if (ShootInputAction)
@@ -177,14 +173,13 @@ void APasteque::Rotate(const FInputActionValue& Value)
 
 void APasteque::Jump(const FInputActionValue& Value)
 {
-	FVector MeshLocation = MeshComponent->GetComponentLocation();
+	FVector PastequeVelocity = MeshComponent->GetPhysicsLinearVelocity();
 
-	if ((MeshLocation.Z - LastBounceLocation.Z) < MaxJumpHeight)
+	if (PastequeVelocity.Z < MaxZVelocity && PastequeVelocity.Z >= 0)
 	{
 		float JumpValue = Value.Get<float>();
 
-		FVector PastequeVelocity = MeshComponent->GetPhysicsLinearVelocity();
-		MeshComponent->SetPhysicsLinearVelocity(PastequeVelocity * (JumpValue * JumpPower), false, FName());
+		MeshComponent->SetPhysicsLinearVelocity(LastBounceDirection * JumpPower, true, FName());
 	}
 }
 

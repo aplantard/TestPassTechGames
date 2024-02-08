@@ -65,10 +65,10 @@ private:
 	UPROPERTY(EditAnywhere, BluePrintReadWrite, Category = "Pasteque", meta = (AllowPrivateAccess = "true"))
 	float RotationSpeed = 10.f;
 
-	UPROPERTY(EditAnywhere, BluePrintReadWrite, Category = "Pasteque", meta = (AllowPrivateAccess = "true"))
-	float MaxJumpHeight = 150.f;
+	UPROPERTY(EditAnywhere, BluePrintReadWrite, Category = "Jump", meta = (AllowPrivateAccess = "true"))
+	float MaxZVelocity = 150.f;
 
-	UPROPERTY(EditAnywhere, BluePrintReadWrite, Category = "Pasteque", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BluePrintReadWrite, Category = "Jump", meta = (AllowPrivateAccess = "true"))
 	float JumpPower = 5.f;
 
 	UPROPERTY(EditAnywhere, Category = "Input")
