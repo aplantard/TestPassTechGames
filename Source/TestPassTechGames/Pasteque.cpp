@@ -5,11 +5,14 @@
 #include "PastequePlayerController.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
+#include "Spell.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/FloatingPawnMovement.h"
 #include "Camera/CameraComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/ArrowComponent.h"
+#include "Components/AudioComponent.h"
 #include "InputMappingContext.h"
 #include "Engine/World.h"
 
@@ -27,6 +30,13 @@ APasteque::APasteque()
 	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("pastequeMesh"));
 	MeshComponent->OnComponentHit.AddDynamic(this, &APasteque::OnHit);
 	MeshComponent->SetupAttachment(SphereCollision);
+
+	AudioComponentSound = CreateDefaultSubobject<UAudioComponent>(TEXT("audioComponent"));
+	AudioComponentSound->bAutoActivate = false;
+	AudioComponentSound->SetupAttachment(MeshComponent);
+
+	SpellSpawnPos = CreateDefaultSubobject<UArrowComponent>(TEXT("spellSpawnPos"));
+	SpellSpawnPos->SetupAttachment(MeshComponent);
 
 	SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>(TEXT("springArmComponent"));
 	SpringArmComponent->SetupAttachment(RootComponent);
@@ -54,7 +64,14 @@ void APasteque::Tick(float DeltaTime)
 	FVector SpringArmLocation = SpringArmComponent->GetComponentLocation();
 	FVector SpringArmRelativeLocation = SpringArmComponent->GetRelativeLocation();
 	FVector MeshLocation = MeshComponent->GetComponentLocation();
-	
+
+	if ((MeshLocation.Z - LastBounceLocation.Z) >= MaxJumpHeight)
+	{
+		FVector PastequeVelocity = MeshComponent->GetPhysicsLinearVelocity();
+		MeshComponent->SetPhysicsLinearVelocity(FVector(PastequeVelocity.X, PastequeVelocity.Y, 0));
+	}
+
+	// Move Camera To Watermelon
 	float AppDeltaTime = GetWorld()->GetDeltaSeconds();
 
 	FVector NewWorldLocation = FMath::VInterpTo(SpringArmLocation, MeshLocation, AppDeltaTime, 2.0f);
@@ -107,18 +124,31 @@ void APasteque::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		Input->BindAction(JumpInputAction.LoadSynchronous(), ETriggerEvent::Triggered, this, &APasteque::Jump);
 	}
 
+	if (ShootInputAction)
+	{
+		Input->BindAction(ShootInputAction.LoadSynchronous(), ETriggerEvent::Triggered, this, &APasteque::Shoot);
+	}
+
 }
 
 void APasteque::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
-	float HeightOfImpactPoint = Hit.ImpactPoint.Z;
+	LastBounceDirection = Hit.ImpactNormal;
+	LastBounceLocation = Hit.ImpactPoint;
 
-	if (HeightOfImpactPoint != NewCameraHeight)
+	if (LastBounceLocation.Z != NewCameraHeight)
 	{
-		NewCameraHeight = InitialCameraHeight + HeightOfImpactPoint;
+		NewCameraHeight = InitialCameraHeight + LastBounceLocation.Z;
 	}
 
-	LastBounceDirection = Hit.ImpactNormal;
+	USoundBase* LocalBounceSound = BounceSound.LoadSynchronous();
+
+	if (AudioComponentSound->GetSound() != LocalBounceSound)
+	{
+		AudioComponentSound->SetSound(LocalBounceSound);
+	}
+	
+	AudioComponentSound->Play();
 }
 
 void APasteque::Move(const FInputActionValue& Value)
@@ -142,13 +172,35 @@ void APasteque::Rotate(const FInputActionValue& Value)
 {
 	float RotateValue = Value.Get<float>();
 	SpringArmComponent->AddWorldRotation(FRotator(0, RotateValue * RotationSpeed, 0));
+	MeshComponent->AddWorldRotation(FRotator(0, RotateValue * RotationSpeed, 0));
 }
 
 void APasteque::Jump(const FInputActionValue& Value)
 {
- 	float JumpValue = Value.Get<float>();
+	FVector MeshLocation = MeshComponent->GetComponentLocation();
 
-	FVector PastequeVelocity = MeshComponent->GetPhysicsLinearVelocity();
-	MeshComponent->SetPhysicsLinearVelocity(FVector(LastBounceDirection.X, LastBounceDirection.Y, LastBounceDirection.Z * (JumpValue * 5 )), true, FName());
+	if ((MeshLocation.Z - LastBounceLocation.Z) < MaxJumpHeight)
+	{
+		float JumpValue = Value.Get<float>();
+
+		FVector PastequeVelocity = MeshComponent->GetPhysicsLinearVelocity();
+		MeshComponent->SetPhysicsLinearVelocity(PastequeVelocity * (JumpValue * JumpPower), false, FName());
+	}
 }
 
+void APasteque::Shoot(const FInputActionValue& Value)
+{
+	FVector SpawnLocation = SpellSpawnPos->GetComponentLocation();
+	FRotator SpawnRotation = SpellSpawnPos->GetComponentRotation();
+
+	GetWorld()->SpawnActor(SpellToThrow, &SpawnLocation, &SpawnRotation, FActorSpawnParameters());
+
+	USoundBase* LocalSpellSound = SpellSound.LoadSynchronous();
+
+	if (AudioComponentSound->GetSound() != LocalSpellSound)
+	{
+		AudioComponentSound->SetSound(LocalSpellSound);
+	}
+
+	AudioComponentSound->Play();
+}

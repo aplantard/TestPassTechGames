@@ -14,4 +14,5 @@ class TESTPASSTECHGAMES_API APastequePlayerController : public APlayerController
 {
 	GENERATED_BODY()
 	
+	virtual void BeginPlay() override;
 };

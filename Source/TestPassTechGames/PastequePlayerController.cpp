@@ -3,3 +3,8 @@
 
 #include "PastequePlayerController.h"
 
+void APastequePlayerController::BeginPlay()
+{
+	bShowMouseCursor = false;
+	SetInputMode(FInputModeGameOnly());
+}

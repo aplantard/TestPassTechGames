@@ -13,6 +13,9 @@ class UCameraComponent;
 class UInputAction;
 class UFloatingPawnMovement;
 class USphereComponent;
+class UArrowComponent;
+class UAudioComponent;
+class ASpell;
 struct FInputActionValue;
 
 UCLASS()
@@ -48,7 +51,13 @@ private:
 	USphereComponent* SphereCollision;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pasteque", meta = (AllowPrivateAccess = "true"))
+	UArrowComponent* SpellSpawnPos;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pasteque", meta = (AllowPrivateAccess = "true"))
 	UFloatingPawnMovement* CharacterMovement;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pasteque", meta = (AllowPrivateAccess = "true"))
+	UAudioComponent* AudioComponentSound;
 
 	UPROPERTY(EditAnywhere, BluePrintReadWrite, Category = "Pasteque", meta = (AllowPrivateAccess = "true"))
 	float MovementSpeed = 1000.f;
@@ -58,6 +67,9 @@ private:
 
 	UPROPERTY(EditAnywhere, BluePrintReadWrite, Category = "Pasteque", meta = (AllowPrivateAccess = "true"))
 	float MaxJumpHeight = 150.f;
+
+	UPROPERTY(EditAnywhere, BluePrintReadWrite, Category = "Pasteque", meta = (AllowPrivateAccess = "true"))
+	float JumpPower = 5.f;
 
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TSoftObjectPtr<UInputMappingContext> InputMapping;
@@ -71,6 +83,18 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TSoftObjectPtr<UInputAction> JumpInputAction;
 
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TSoftObjectPtr<UInputAction> ShootInputAction;
+
+	UPROPERTY(EditAnywhere, Category = "SFX")
+	TSoftObjectPtr<USoundBase> BounceSound;
+
+	UPROPERTY(EditAnywhere, Category = "SFX")
+	TSoftObjectPtr<USoundBase> SpellSound;
+
+	UPROPERTY(EditAnywhere, Category = "Spell")
+	TSubclassOf<ASpell> SpellToThrow;
+
 	UFUNCTION()
 	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
@@ -78,9 +102,11 @@ private:
 	float InitialCameraHeight = 0.f;
 	float NewCameraHeight = 0.f;
 	FVector LastBounceDirection = FVector(0, 0, 1);
+	FVector LastBounceLocation = FVector();
 
 	void Move(const FInputActionValue& Value);
 	void Rotate(const FInputActionValue& Value);
 	void Jump(const FInputActionValue& Value);
+	void Shoot(const FInputActionValue& Value);
 
 };
